@@ -15,7 +15,7 @@
 ### **Usage**:
 paste your bot's token here
 ```sh
-client.run("TOKEN")
+client.run(os.getenv('TOKEN'))
 ```
 
 **keep_alive.py** will keep the bot's server from sleeping when deployed
