@@ -9,6 +9,7 @@
 - **kick/ban a member**
 - **send DM's to members**
 - **Delete messages from certain channel**
+- **connect/disconnect bot to voice channels**
 
 ---
 
