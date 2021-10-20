@@ -7,6 +7,8 @@ import requests
 import json
 import os
 import youtube_dl
+import urllib.request
+import re
 
 load_dotenv()
 client = commands.Bot(command_prefix='.', help_command=None)
@@ -82,33 +84,35 @@ async def join(context):
 async def leave(context):
     voice = discord.utils.get(client.voice_clients, guild=context.guild)
     if voice is not None:
-        await context.message.guild.voice_client.disconnect()
+        if voice.is_playing():
+            voice.stop()
+            await context.message.guild.voice_client.disconnect()
+        else:
+            await context.message.guild.voice_client.disconnect()
     else:
         voice_channel = context.message.author.voice
         await context.message.channel.send("bot is not connected to `{0.channel}` channel".format(voice_channel))
 
 
 @client.command(name='play')
-async def play(context, url_: str):
+async def play(context, *, query: str):
     context.voice_client.stop()
-    song_there = os.path.isfile('song.mp3')
-    try:
-        if song_there:
-            os.remove('song.mp3')
-    except PermissionError:
-        context.message.channel.send("wait for current playing music to end or use `stop` command")
-        return
     voice = discord.utils.get(client.voice_clients, guild=context.guild)
     if voice is not None:
         if voice.is_connected():
+            search_query = query.strip().replace(" ", "+")
+            html = urllib.request.urlopen("https://www.youtube.com/results?search_query=" + search_query)
+            video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
+            fetched_url = "https://www.youtube.com/watch?v=" + video_ids[0]
             FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
                               'options': '-vn'}
-            ydl_opts = {'format': 'bestaudio/best'}
+            ydl_opts = {'format': 'bestaudio'}
             vc = context.voice_client
             with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url_, download=False)
+                info = ydl.extract_info(fetched_url, download=False)
                 url2 = info['formats'][0]['url']
                 source = await discord.FFmpegOpusAudio.from_probe(url2, **FFMPEG_OPTIONS)
+                await context.message.channel.send("playing " + fetched_url)
                 vc.play(source)
     else:
         await context.message.channel.send("not connect to voice channel")
@@ -152,17 +156,19 @@ async def stop(context):
 
 # a command to print help
 @client.command(name='help')
-async def help(context):
+async def help_dialog(context):
     await context.message.channel.send("`.version` -- to know which version bot is running on\n"
                                        "`.help` -- to show this dialog"
                                        "`.inspire` -- to print a random inspiring quote\n"
                                        "`.join` -- for bot to join a voice channel\n"
                                        "`.leave` -- for bot to leave a voice channel\n"
-                                       "`.play` -- for bot to play a song\n"
-                                       "`.pause` -- for bot to stop playing a song\n"
+                                       "`.play <your-query>` -- for bot to play a song\n"
+                                       "`.pause` -- for bot to pause playing a song\n"
+                                       "`.resume` -- for bot to resume previous song\n"
+                                       "`.stop` -- for bot to stop playing a song\n"
                                        "`.kick <member>` -- to kick a member\n"
                                        "`.ban <member>` -- to ban a member\n\n"
-                                       "`No text-messages allowed in meme-only channel`")
+                                       "`you can also send youtube URL as query to play command`")
 
 
 @client.event
