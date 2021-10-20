@@ -115,7 +115,7 @@ async def play(context, *, query: str):
                 await context.message.channel.send("playing " + fetched_url)
                 vc.play(source)
     else:
-        await context.message.channel.send("not connect to voice channel")
+        await context.message.channel.send("not connected to a voice channel")
 
 
 @client.command(name='pause')
