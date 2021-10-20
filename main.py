@@ -158,7 +158,7 @@ async def stop(context):
 @client.command(name='help')
 async def help_dialog(context):
     await context.message.channel.send("`.version` -- to know which version bot is running on\n"
-                                       "`.help` -- to show this dialog"
+                                       "`.help` -- to show this dialog\n"
                                        "`.inspire` -- to print a random inspiring quote\n"
                                        "`.join` -- for bot to join a voice channel\n"
                                        "`.leave` -- for bot to leave a voice channel\n"
