@@ -1,15 +1,14 @@
 import discord
 from discord.ext import commands, tasks
-import os
-import requests
-import json
 from random import choice
 from keep_alive import keep_alive
-from discord import Game
-from ctypes.util import find_library
-from discord import opus
-import nacl
+from dotenv import load_dotenv
+import requests
+import json
+import os
+import youtube_dl
 
+load_dotenv()
 client = commands.Bot(command_prefix='.', help_command=None)
 
 status = ['jamming out to music!', 'Eating!', 'Sleeping!']
@@ -33,10 +32,10 @@ async def change_status():
 # a command to display version of the bot
 @client.command(name='version')
 async def version(context):
-    myEmbed = discord.Embed(title="current version", description="The bot is in version 1.0", color=0x00ff00)
-    myEmbed.add_field(name="version code:", value="v1.0.0", inline=False)
-    myEmbed.add_field(name="date released:", value="January 2021", inline=False)
-    await context.message.channel.send(embed=myEmbed)
+    my_embed = discord.Embed(title="current version", description="This bot is currently in pre-release", color=0x00ff00)
+    my_embed.add_field(name="version code:", value="v1.0.5-beta-2", inline=False)
+    my_embed.add_field(name="initial release:", value="January 2021", inline=False)
+    await context.message.channel.send(embed=my_embed)
 
 
 # a command to kick a member
@@ -62,6 +61,7 @@ async def inspire(context):
     await context.message.channel.send(quote)
 
 
+# a command for bot to join voice channel
 @client.command(name='join')
 async def join(context):
     if not context.message.author.voice:
@@ -69,27 +69,100 @@ async def join(context):
         return
     else:
         channel = context.message.author.voice.channel
-    await channel.connect()
+        voice = discord.utils.get(client.voice_clients, guild=context.guild)
+        if voice is None:
+            await channel.connect()
+        else:
+            voice_channel = context.message.author.voice
+            await context.message.channel.send("bot is already connected to `{0.channel}` channel".format(voice_channel))
 
 
+# a command for bot to leave voice channel
 @client.command(name='leave', pass_context=True)
 async def leave(context):
-    await context.message.guild.voice_client.disconnect()
+    voice = discord.utils.get(client.voice_clients, guild=context.guild)
+    if voice is not None:
+        await context.message.guild.voice_client.disconnect()
+    else:
+        voice_channel = context.message.author.voice
+        await context.message.channel.send("bot is not connected to `{0.channel}` channel".format(voice_channel))
+
+
+@client.command(name='play')
+async def play(context, url_: str):
+    context.voice_client.stop()
+    song_there = os.path.isfile('song.mp3')
+    try:
+        if song_there:
+            os.remove('song.mp3')
+    except PermissionError:
+        context.message.channel.send("wait for current playing music to end or use `stop` command")
+        return
+    voice = discord.utils.get(client.voice_clients, guild=context.guild)
+    if voice is not None:
+        if voice.is_connected():
+            FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+                              'options': '-vn'}
+            ydl_opts = {'format': 'bestaudio/best'}
+            vc = context.voice_client
+            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url_, download=False)
+                url2 = info['formats'][0]['url']
+                source = await discord.FFmpegOpusAudio.from_probe(url2, **FFMPEG_OPTIONS)
+                vc.play(source)
+    else:
+        await context.message.channel.send("not connect to voice channel")
+
+
+@client.command(name='pause')
+async def pause(context):
+    voice = discord.utils.get(client.voice_clients, guild=context.guild)
+    if voice is not None:
+        if voice.is_playing():
+            voice.pause()
+        else:
+            await context.message.channel.send("no audio playing...")
+    else:
+        await context.message.channel.send("no audio playing...")
+
+
+@client.command(name='resume')
+async def resume(context):
+    voice = discord.utils.get(client.voice_clients, guild=context.guild)
+    if voice is not None:
+        if voice.is_paused():
+            voice.resume()
+        else:
+            await context.message.channel.send("no music in queue...")
+    else:
+        await context.message.channel.send("no music in queue...")
+
+
+@client.command(name='stop')
+async def stop(context):
+    voice = discord.utils.get(client.voice_clients, guild=context.guild)
+    if voice is not None:
+        if voice.is_playing():
+            voice.stop()
+        else:
+            await context.message.channel.send("no music playing...")
+    else:
+        await context.message.channel.send("no music playing...")
 
 
 # a command to print help
 @client.command(name='help')
 async def help(context):
     await context.message.channel.send("`.version` -- to know which version bot is running on\n"
+                                       "`.help` -- to show this dialog"
                                        "`.inspire` -- to print a random inspiring quote\n"
                                        "`.join` -- for bot to join a voice channel\n"
                                        "`.leave` -- for bot to leave a voice channel\n"
                                        "`.play` -- for bot to play a song\n"
-                                       "`.stop` -- for bot to stop playing a song\n"
+                                       "`.pause` -- for bot to stop playing a song\n"
                                        "`.kick <member>` -- to kick a member\n"
                                        "`.ban <member>` -- to ban a member\n\n"
-                                       "// No text-messages allowed in meme-only channel\n"
-                                       "// type <send me DM> to receive a DM from BOT")
+                                       "`No text-messages allowed in meme-only channel`")
 
 
 @client.event
@@ -108,10 +181,9 @@ async def on_message(message):
     # deleting any text from 'memes-only' channel
     if str(message.channel) == 'memes-only' and message.content != "":
         await message.channel.purge(limit=1)
-
-    # sending DM to author of message
-    if message.content == 'send a DM':
-        await message.author.send("This is a DM! \nHave a good day!")
+        await message.author.send(
+            "do not send any text messages in `memes-only` channel")  # it sends a DM to user to stop sending text
+        # message in memes-only channel.
 
     # we add this statement when we have '@client.commands' because if we type  a command then both 'on_message' and
     # 'client.commands' will work on it and   we have to prevent that from happening
@@ -119,4 +191,4 @@ async def on_message(message):
 
 
 keep_alive()
-client.run(os.getenv('TOKEN'))
+client.run(os.getenv("TOKEN"))
