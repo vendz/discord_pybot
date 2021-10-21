@@ -41,7 +41,7 @@ async def version(context):
 @commands.has_permissions(kick_members=True)
 async def kick(context, member: discord.Member):
     await member.kick()
-    await context.send(member.display_name + " has been kicked!")
+    await context.send(member.display_name + " has been kicked! 🚫")
 
 
 # a command to ban a member
@@ -49,7 +49,7 @@ async def kick(context, member: discord.Member):
 @commands.has_permissions(kick_members=True)
 async def ban(context, member: discord.Member, *, reason=None):
     await member.ban(reason=reason)
-    await context.send(member.display_name + " has been Banned!")
+    await context.send(member.display_name + " has been Banned! 🚫")
 
 
 # a command to print random quote
@@ -70,9 +70,10 @@ async def join(context):
         voice = discord.utils.get(client.voice_clients, guild=context.guild)
         if voice is None:
             await channel.connect()
+            await context.message.channel.send(f"👍 **Joined** `{context.message.author.voice.channel}` 📄 **And bound to** `{context.message.channel}`")
         else:
             voice_channel = context.message.author.voice
-            await context.message.channel.send("bot is already connected to `{0.channel}` channel".format(voice_channel))
+            await context.message.channel.send("bot is already connected to `{0.channel}` channel :warning:".format(voice_channel))
 
 
 # a command for bot to leave voice channel
@@ -87,37 +88,21 @@ async def leave(context):
             await context.message.guild.voice_client.disconnect()
     else:
         voice_channel = context.message.author.voice
-        await context.message.channel.send("bot is not connected to `{0.channel}` channel".format(voice_channel))
+        await context.message.channel.send("bot is not connected to `{0.channel}` channel ❌".format(voice_channel))
 
 
 @client.command(name='play')
 async def play(context, *, query: str):
-    context.voice_client.stop()
     voice = discord.utils.get(client.voice_clients, guild=context.guild)
     if voice is not None:
+        context.voice_client.stop()
         if voice.is_connected():
-            await context.message.channel.send("**Searching** :mag_right: `" + query + "`")
-            FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-                              'options': '-vn'}
-            ydl_opts = {'format': 'bestaudio'}
-            vc = context.voice_client
-            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
-                audio_url = info['formats'][0]['url']
-                title = info['title']
-                channel = info['channel']
-                thumbnail = info['thumbnails'][1]['url']
-                duration = convertToMinutes(info['duration'])
-                source = await discord.FFmpegOpusAudio.from_probe(audio_url, **FFMPEG_OPTIONS)
-                my_embed = discord.Embed(title="**" + title + "**", url=info['webpage_url'], color=discord.Color.red())
-                my_embed.set_author(name="Now Playing...🎸", icon_url=context.author.avatar_url)
-                my_embed.set_thumbnail(url=thumbnail)
-                my_embed.add_field(name="Channel", value=channel, inline=True)
-                my_embed.add_field(name="Duration", value=duration, inline=True)
-                await context.message.channel.send(embed=my_embed)
-                vc.play(source)
+            await play_func(context, query, voice)
     else:
-        await context.message.channel.send("not connected to a voice channel")
+        channel = context.message.author.voice.channel
+        await channel.connect()
+        await context.message.channel.send(f"👍 **Joined** `{context.message.author.voice.channel}` 📄 **And bound to** `{context.message.channel}`")
+        await play_func(context, query, voice)
 
 
 @client.command(name='pause')
@@ -126,6 +111,7 @@ async def pause(context):
     if voice is not None:
         if voice.is_playing():
             voice.pause()
+            await context.message.channel.send("**Paused ⏸**")
         else:
             await context.message.channel.send("no audio playing... ❌")
     else:
@@ -138,6 +124,7 @@ async def resume(context):
     if voice is not None:
         if voice.is_paused():
             voice.resume()
+            await context.message.channel.send("**Resumed :arrow_forward:**")
         else:
             await context.message.channel.send("no music was playing... ❌")
     else:
@@ -150,6 +137,7 @@ async def stop(context):
     if voice is not None:
         if voice.is_playing():
             voice.stop()
+            await context.message.channel.send("**Stopped 🛑**")
         else:
             await context.message.channel.send("no music playing... ❌")
     else:
@@ -218,6 +206,29 @@ def convertToMinutes(seconds):
         return "%d:%02d:%02d" % (hour, minutes, seconds)
     elif hour == 0:
         return "%02d:%02d" % (minutes, seconds)
+
+
+async def play_func(context, query, voice):
+    await context.message.channel.send("**Searching** :mag_right: `" + query + "`")
+    FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+                        'options': '-vn'}
+    ydl_opts = {'format': 'bestaudio'}
+    vc = context.voice_client
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
+        audio_url = info['formats'][0]['url']
+        title = info['title']
+        channel = info['channel']
+        thumbnail = info['thumbnails'][1]['url']
+        duration = convertToMinutes(info['duration'])
+        source = await discord.FFmpegOpusAudio.from_probe(audio_url, **FFMPEG_OPTIONS)
+        my_embed = discord.Embed(title="**" + title + "**", url=info['webpage_url'], color=discord.Color.red())
+        my_embed.set_author(name="Now Playing...🎶", icon_url=context.author.avatar_url)
+        my_embed.set_thumbnail(url=thumbnail)
+        my_embed.add_field(name="Channel", value=channel, inline=True)
+        my_embed.add_field(name="Duration", value=duration, inline=True)
+        await context.message.channel.send(embed=my_embed)
+        vc.play(source)
 
 
 client.run(os.environ["TOKEN"])
