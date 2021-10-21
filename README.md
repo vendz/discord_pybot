@@ -31,10 +31,8 @@ macOS users can install youtube-dl with [Homebrew](https://brew.sh/):
 ### **Usage**:
 paste your bot's token here
 ```sh
-client.run(os.getenv('TOKEN'))
+client.run(os.environ['TOKEN'])
 ```
-
-**keep_alive.py** will keep the bot's server from sleeping when deployed
 
 ---
 ## © [Vandit](https://github.com/vendz)
