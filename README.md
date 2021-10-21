@@ -1,6 +1,5 @@
 # discord_pybot
-### Show some :heart: and :star: the repo to support the project
-
+### add this bot to your server ([click here](https://discord.com/api/oauth2/authorize?client_id=793388578880880660&permissions=8&scope=bot))
 ---
 
 ### **Features**:
