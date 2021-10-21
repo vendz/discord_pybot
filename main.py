@@ -1,8 +1,6 @@
 import discord
 from discord.ext import commands, tasks
 from random import choice
-# from keep_alive import keep_alive
-# from dotenv import load_dotenv
 import requests
 import json
 import os
@@ -10,7 +8,6 @@ import youtube_dl
 import urllib.request
 import re
 
-# load_dotenv()
 client = commands.Bot(command_prefix='.', help_command=None)
 
 status = ['jamming out to music!', 'Eating!', 'Sleeping!']
@@ -34,8 +31,8 @@ async def change_status():
 # a command to display version of the bot
 @client.command(name='version')
 async def version(context):
-    my_embed = discord.Embed(title="current version", description="This bot is currently in pre-release", color=0x00ff00)
-    my_embed.add_field(name="version code:", value="v1.0.5-beta-2", inline=False)
+    my_embed = discord.Embed(title="current version", description="this is bot is in version 1.2.1", color=0x00ff00)
+    my_embed.add_field(name="version code:", value="v1.2.1", inline=False)
     my_embed.add_field(name="initial release:", value="January 2021", inline=False)
     await context.message.channel.send(embed=my_embed)
 
@@ -196,5 +193,4 @@ async def on_message(message):
     await client.process_commands(message)
 
 
-# keep_alive()
 client.run(os.environ("TOKEN"))
