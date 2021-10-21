@@ -7,7 +7,7 @@ import json
 import os
 import youtube_dl
 
-client = commands.Bot(command_prefix=',', help_command=None)
+client = commands.Bot(command_prefix='.', help_command=None)
 
 status = ['jamming out to music!', 'Eating!', 'Sleeping!']
 
