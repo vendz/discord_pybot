@@ -1,14 +1,13 @@
 import discord
+from discord.utils import find
 from discord.ext import commands, tasks
 from random import choice
 import requests
 import json
 import os
 import youtube_dl
-import urllib.request
-import re
 
-client = commands.Bot(command_prefix='.', help_command=None)
+client = commands.Bot(command_prefix=',', help_command=None)
 
 status = ['jamming out to music!', 'Eating!', 'Sleeping!']
 
@@ -64,7 +63,7 @@ async def inspire(context):
 @client.command(name='join')
 async def join(context):
     if not context.message.author.voice:
-        await context.message.channel.send("You are not connected to a voice channel")
+        await context.message.channel.send("You are not connected to a voice channel ❌")
         return
     else:
         channel = context.message.author.voice.channel
@@ -97,19 +96,25 @@ async def play(context, *, query: str):
     voice = discord.utils.get(client.voice_clients, guild=context.guild)
     if voice is not None:
         if voice.is_connected():
-            search_query = query.strip().replace(" ", "+")
-            html = urllib.request.urlopen("https://www.youtube.com/results?search_query=" + search_query)
-            video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
-            fetched_url = "https://www.youtube.com/watch?v=" + video_ids[0]
+            await context.message.channel.send("**Searching** :mag_right: `" + query + "`")
             FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
                               'options': '-vn'}
             ydl_opts = {'format': 'bestaudio'}
             vc = context.voice_client
             with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(fetched_url, download=False)
-                url2 = info['formats'][0]['url']
-                source = await discord.FFmpegOpusAudio.from_probe(url2, **FFMPEG_OPTIONS)
-                await context.message.channel.send("playing " + fetched_url)
+                info = ydl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
+                audio_url = info['formats'][0]['url']
+                title = info['title']
+                channel = info['channel']
+                thumbnail = info['thumbnails'][1]['url']
+                duration = convertToMinutes(info['duration'])
+                source = await discord.FFmpegOpusAudio.from_probe(audio_url, **FFMPEG_OPTIONS)
+                my_embed = discord.Embed(title="**" + title + "**", url=info['webpage_url'], color=discord.Color.red())
+                my_embed.set_author(name="Now Playing...🎸", icon_url=context.author.avatar_url)
+                my_embed.set_thumbnail(url=thumbnail)
+                my_embed.add_field(name="Channel", value=channel, inline=True)
+                my_embed.add_field(name="Duration", value=duration, inline=True)
+                await context.message.channel.send(embed=my_embed)
                 vc.play(source)
     else:
         await context.message.channel.send("not connected to a voice channel")
@@ -122,9 +127,9 @@ async def pause(context):
         if voice.is_playing():
             voice.pause()
         else:
-            await context.message.channel.send("no audio playing...")
+            await context.message.channel.send("no audio playing... ❌")
     else:
-        await context.message.channel.send("no audio playing...")
+        await context.message.channel.send("no audio playing... ❌")
 
 
 @client.command(name='resume')
@@ -134,9 +139,9 @@ async def resume(context):
         if voice.is_paused():
             voice.resume()
         else:
-            await context.message.channel.send("no music in queue...")
+            await context.message.channel.send("no music was playing... ❌")
     else:
-        await context.message.channel.send("no music in queue...")
+        await context.message.channel.send("no music was playing.. ❌")
 
 
 @client.command(name='stop')
@@ -146,9 +151,9 @@ async def stop(context):
         if voice.is_playing():
             voice.stop()
         else:
-            await context.message.channel.send("no music playing...")
+            await context.message.channel.send("no music playing... ❌")
     else:
-        await context.message.channel.send("no music playing...")
+        await context.message.channel.send("no music playing... ❌")
 
 
 # a command to print help
@@ -191,6 +196,28 @@ async def on_message(message):
     # we add this statement when we have '@client.commands' because if we type  a command then both 'on_message' and
     # 'client.commands' will work on it and   we have to prevent that from happening
     await client.process_commands(message)
+
+
+@client.event
+async def on_guild_join(guild):
+    general = find(lambda x: x.name == 'general',  guild.text_channels)
+    if general and general.permissions_for(guild.me).send_messages:
+        await general.send("**Thanks for adding Vendz**\n\n"
+        "`-` My prefix is `.`\n"
+        "`-` Use `.help` to view all my commands\n"
+        "`-` Currently I can only play from YouTube")
+
+
+def convertToMinutes(seconds):
+    seconds = seconds % (24 * 3600)
+    hour = seconds // 3600
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
+    if hour != 0:
+        return "%d:%02d:%02d" % (hour, minutes, seconds)
+    elif hour == 0:
+        return "%02d:%02d" % (minutes, seconds)
 
 
 client.run(os.environ["TOKEN"])
