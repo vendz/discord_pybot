@@ -97,12 +97,12 @@ async def play(context, *, query: str):
     if voice is not None:
         context.voice_client.stop()
         if voice.is_connected():
-            await play_func(context, query, voice)
+            await play_func(context, query)
     else:
         channel = context.message.author.voice.channel
         await channel.connect()
         await context.message.channel.send(f"👍 **Joined** `{context.message.author.voice.channel}` 📄 **And bound to** `{context.message.channel}`")
-        await play_func(context, query, voice)
+        await play_func(context, query)
 
 
 @client.command(name='pause')
@@ -208,7 +208,7 @@ def convertToMinutes(seconds):
         return "%02d:%02d" % (minutes, seconds)
 
 
-async def play_func(context, query, voice):
+async def play_func(context, query):
     await context.message.channel.send("**Searching** :mag_right: `" + query + "`")
     FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
                         'options': '-vn'}
