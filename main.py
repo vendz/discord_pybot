@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands, tasks
 from random import choice
-from keep_alive import keep_alive
-from dotenv import load_dotenv
+# from keep_alive import keep_alive
+# from dotenv import load_dotenv
 import requests
 import json
 import os
@@ -10,7 +10,7 @@ import youtube_dl
 import urllib.request
 import re
 
-load_dotenv()
+# load_dotenv()
 client = commands.Bot(command_prefix='.', help_command=None)
 
 status = ['jamming out to music!', 'Eating!', 'Sleeping!']
@@ -196,5 +196,5 @@ async def on_message(message):
     await client.process_commands(message)
 
 
-keep_alive()
-client.run(os.getenv("TOKEN"))
+# keep_alive()
+client.run(os.environ("TOKEN"))
